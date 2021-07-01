@@ -1,0 +1,5 @@
+rs
+cargo new ~tag
+mv main.rs ~tag/src/main.rs
+cd ~tag
+cargo r
