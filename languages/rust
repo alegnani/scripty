@@ -1,5 +1,5 @@
 rs
-cargo new ~tag
-mv main.rs ~tag/src/main.rs
-cd ~tag
+cargo new tmp
+mv main.rs tmp/src/main.rs
+cd tmp
 cargo r

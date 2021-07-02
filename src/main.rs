@@ -1,21 +1,26 @@
+use helper::*;
+use serenity::client::{Context, EventHandler};
+use serenity::model::channel::Message;
 use serenity::{
     async_trait,
-    client::{Context, EventHandler},
-    model::channel::Message,
     Client,
 };
-use std::{env, fmt::format, time::Duration};
-use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
+use std::env;
 
+use crate::language_pool::LanguagePool;
+use crate::tasks::pipeline;
+
+mod helper;
 mod language;
 mod language_pool;
-mod script_service;
+mod tasks;
 
 #[tokio::main]
 async fn main() {
-    const HELP_COMMAND: &str = "~help";
-    const HELP_MESSAGE: &str = "help message for scripty";
+    let _ = LANG_POOL.set(LanguagePool::new().await);
+
+    //const HELP_COMMAND: &str = "~help";
+    //const HELP_MESSAGE: &str = "help message for scripty";
 
     let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN is not set");
 
@@ -35,12 +40,16 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        println!("new message: {}", msg.content);
-        if msg.content == "~ping" {
-            if let Err(e) = msg.channel_id.say(&ctx.http, "Pong").await {
-                println!("Error sending message: {:?}", e);
-            }
+        println!("New message in channel");
+        if !&msg.content.starts_with("~run") {
+            return;
         }
+        let reply = match pipeline(&msg.content).await {
+            Ok(s) => s,
+            Err(e) => e.to_string(),
+        };
+        let reply = format!("```{}```", reply);
+        msg.channel_id.say(ctx.http, reply).await.unwrap();
     }
 
     async fn ready(&self, _ctx: Context, data: serenity::model::prelude::Ready) {
