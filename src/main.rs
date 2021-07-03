@@ -41,7 +41,8 @@ impl EventHandler for Handler {
                 Err(e) => e.to_string(),
             };
             let reply = format!("```{}```", reply);
-            msg.channel_id.say(ctx.http, reply).await.unwrap();
+            msg.reply(ctx.http, reply).await.unwrap();
+
         }
     }
     // TODO: fix duplicated code

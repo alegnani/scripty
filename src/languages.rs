@@ -37,15 +37,12 @@ impl LanguagePool {
         }
         LanguagePool { set }
     }
-    // FIXME: fix this c++ bullshit
     pub async fn lang_supported(&self, lang: &str) -> bool {
-        let lang = if lang == "c++" { "cpp" } else { lang };
         self.set.contains(lang)
     }
 
     pub async fn new_snippet(&self, lang: String, code: String) -> Result<Snippet> {
         if self.lang_supported(&lang).await {
-            let lang = if lang == "c++" { "cpp".into() } else { lang };
             let executor = format!("{}_executor", lang);
             return Ok(Snippet::new(executor, code).await);
         }
@@ -108,7 +105,7 @@ mod tests {
         let rs_supported = pool.lang_supported("rust").await;
         assert!(rs_supported);
 
-        let cpp_supported = pool.lang_supported("c++").await;
+        let cpp_supported = pool.lang_supported("cpp").await;
         assert!(cpp_supported);
 
         let ktl_supported = pool.lang_supported("kotlin").await;
@@ -118,7 +115,7 @@ mod tests {
     #[tokio::test]
     async fn lang_pool_new_snippet() {
         let pool = LanguagePool::new().await;
-        let snippet = pool.new_snippet("c++".into(), "test".into()).await.unwrap();
+        let snippet = pool.new_snippet("cpp".into(), "test".into()).await.unwrap();
         let reference = Snippet::new("cpp_executor".into(), "test".into()).await;
         assert_eq!(snippet, reference);
 
@@ -132,6 +129,7 @@ mod tests {
 
     #[tokio::test]
     async fn snippet_run() {
+        // FIXME: fix java, not working
         let snippet = Snippet::new("python_executor".into(), "print('test')".into()).await;
         let res = snippet.run().await.unwrap();
         println!("Res: {}", res);
