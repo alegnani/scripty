@@ -1,3 +1,3 @@
 fn main() {
-    println!("bestia");
+    println!("rust_test");
 }
