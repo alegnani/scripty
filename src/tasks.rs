@@ -4,13 +4,15 @@ use anyhow::{anyhow, Result};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
+use std::convert::TryInto;
+use std::process::Stdio;
 use uuid::Uuid;
 
 pub async fn pipeline(cmd: &str) -> Result<String> {
     let r_task = RawTask::from_command(cmd).await?;
     let task = r_task.to_task().await?;
     let env = Env::from(task).await?;
-    let reply = env.run().await?;
+    let reply = env.run_docker().await?;
     Ok(reply)
 }
 
@@ -72,12 +74,11 @@ impl<'a> Env<'a> {
             lang: t.lang,
         };
         env.create_code(t.code).await?;
-        env.create_launch().await?;
         Ok(env)
     }
 
     async fn create_code(&self, code: String) -> Result<()> {
-        let file_path = format!("{}/main.{}", &self.path, self.lang.get_extension().await);
+        let file_path = format!("{}/code", &self.path);
         let mut f = fs::File::create(file_path)
             .await
             .map_err(|_| anyhow!("Could not create code file"))?;
@@ -87,36 +88,18 @@ impl<'a> Env<'a> {
         Ok(())
     }
 
-    async fn create_launch(&self) -> Result<()> {
-        let file_path = format!("{}/run.sh", &self.path);
-        let mut f = fs::File::create(&file_path)
-            .await
-            .map_err(|_| anyhow!("Could not create launch file"))?;
-        f.write_all(self.lang.get_launch().await.as_bytes())
-            .await
-            .map_err(|_| anyhow!("Could not write to launch file"))?;
-        if !Command::new("chmod")
-            .arg("+x")
-            .arg(file_path)
-            .spawn()?
-            .wait()
-            .await?
-            .success()
-        {
-            return Err(anyhow!("Could not add exec permission to launch file"));
-        }
-        Ok(())
-    }
-
-    pub async fn run(self) -> Result<String> {
-        let output =Command::new("/bin/sh").arg("run.sh").current_dir(&self.path).output().await.unwrap();
-        let output = if output.stderr.is_empty() {
-            output.stdout
+    pub async fn run_docker(self) -> Result<String> {
+        let executor = format!("{}_executor", &self.lang.get_name().await);
+        let mut read_code = Command::new("cat").arg("code").current_dir(&self.path).stdout(Stdio::piped()).spawn()?;
+        let pipe: Stdio = read_code.stdout.take().unwrap().try_into()?;
+        let docker_run = Command::new("docker").arg("run").arg("-i").arg("--rm").arg(executor).stdin(pipe).output().await?;
+        let output = if docker_run.stderr.is_empty() {
+            docker_run.stdout
         } else {
-            output.stderr
+            docker_run.stderr
         };
         self.clean_up().await?;
-        Ok(String::from_utf8(output).unwrap())
+        Ok(String::from_utf8(output)?)
     }
 
     pub async fn clean_up(self) -> Result<()> {
@@ -154,10 +137,10 @@ mod tests {
         let incorrect = "~run ```kotlin\ntest\n```";
 
         let r = RawTask::from_command(correct).await.unwrap();
-        let t = r.to_task().await.unwrap();
+        let _ = r.to_task().await.unwrap();
 
         let r = RawTask::from_command(incorrect).await.unwrap();
-        let t = r.to_task().await.unwrap_err();
+        let _ = r.to_task().await.unwrap_err();
     }
 
     #[tokio::test]
@@ -187,7 +170,7 @@ mod tests {
         .await
         .unwrap();
         println!("{}", env.path);
-        let output = env.run().await.unwrap();
+        let output = env.run_docker().await.unwrap();
         assert_eq!(output, "hi\n");
     }
 }
