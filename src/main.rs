@@ -1,19 +1,13 @@
 use helper::*;
 use serenity::client::{Context, EventHandler};
 use serenity::model::channel::Message;
-use serenity::{
-    async_trait,
-    Client,
-};
+use serenity::{async_trait, Client};
 use std::env;
 
-use crate::language_pool::LanguagePool;
-use crate::tasks::pipeline;
+use crate::languages::{run_pipeline, LanguagePool};
 
 mod helper;
-mod language;
-mod language_pool;
-mod tasks;
+mod languages;
 
 #[tokio::main]
 async fn main() {
@@ -41,15 +35,27 @@ struct Handler;
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         println!("New message in channel");
-        if !&msg.content.starts_with("~run") {
-            return;
+        if msg.content.starts_with("~run") {
+            let reply = match run_pipeline(&msg.content).await {
+                Ok(s) => s,
+                Err(e) => e.to_string(),
+            };
+            let reply = format!("```{}```", reply);
+            msg.channel_id.say(ctx.http, reply).await.unwrap();
         }
-        let reply = match pipeline(&msg.content).await {
-            Ok(s) => s,
-            Err(e) => e.to_string(),
-        };
-        let reply = format!("```{}```", reply);
-        msg.channel_id.say(ctx.http, reply).await.unwrap();
+    }
+    // TODO: fix duplicated code
+    async fn message_update(&self, ctx: Context, new_data: serenity::model::event::MessageUpdateEvent) {
+        println!("Message edited");
+        let content = new_data.content.unwrap().clone();
+        if content.starts_with("~run") {
+            let reply = match run_pipeline(&content).await {
+                Ok(s) => s,
+                Err(e) => e.to_string(),
+            };
+            let reply = format!("```{}```", reply);
+            new_data.channel_id.say(ctx.http, reply).await.unwrap();
+        }
     }
 
     async fn ready(&self, _ctx: Context, data: serenity::model::prelude::Ready) {

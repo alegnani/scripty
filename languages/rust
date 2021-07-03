@@ -1,5 +1,0 @@
-rs
-cargo new tmp
-mv main.rs tmp/src/main.rs
-cd tmp
-cargo r
