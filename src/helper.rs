@@ -9,7 +9,7 @@ pub static CMD_RGX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^~run *```([a-z]*)\n((?s).*)\n```").unwrap());
 
 pub static LANGS_PATH: Lazy<String> =
-    Lazy::new(|| env::var("SCRIPTY_LANGS").expect("Environment variable: SCRIPTY_LANGS not set"));
+    Lazy::new(|| env::var("SCRIPTY").expect("Environment variable: SCRIPTY_LANGS not set"));
 pub static LANG_POOL: OnceCell<LanguagePool> = OnceCell::const_new();
 
 #[cfg(test)]
