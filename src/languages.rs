@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use std::{collections::HashSet, process::Stdio};
 use tokio::{fs, io::AsyncWriteExt, process::Command, time::{Instant, Duration}};
+use tracing::{instrument, info, warn, error};
 
 use crate::helper::{CMD_RGX, LANGS_PATH, LANG_POOL};
 
@@ -11,8 +12,10 @@ pub async fn run_pipeline(msg: &str) -> Result<Response> {
     Ok(res)
 }
 
+#[instrument]
 pub async fn parse(msg: &str) -> Result<(String, String)> {
     if !CMD_RGX.is_match(&msg) {
+        error!("Message does not match regex");
         return Err(anyhow!("Regex does not match command"));
     }
     let captures = CMD_RGX.captures(msg).unwrap();
@@ -35,18 +38,26 @@ impl LanguagePool {
                 set.insert(entry.file_name().into_string().unwrap());
             }
         }
+        info!("New language pool created");
         LanguagePool { set }
     }
+
     pub async fn lang_supported(&self, lang: &str) -> bool {
         self.set.contains(lang)
     }
 
+    pub async fn get_supported(&self) -> Vec<String> {
+        self.set.iter().map(|s| s.clone()).collect()
+    }
+
+    #[instrument]
     pub async fn new_snippet(&self, lang: String, code: String) -> Result<Snippet> {
         if self.lang_supported(&lang).await {
             let executor = format!("{}_executor", lang);
+            info!("Language is supported");
             return Ok(Snippet::new(executor, code).await);
         }
-        // TODO: log missing language
+        warn!("Language not supported: {}", lang);
         Err(anyhow!("Language is not yet supported"))
     }
 }
@@ -73,7 +84,9 @@ impl Snippet {
     pub async fn new(executor: String, code: String) -> Self {
         Self { executor, code }
     }
+    #[instrument]
     pub async fn run(self) -> Result<Response> {
+        info!("Running snippet");
         let start_time = Instant::now();
 
         let mut run = Command::new("docker")
@@ -93,6 +106,8 @@ impl Snippet {
         });
         let output = run.wait_with_output().await.unwrap();
         let execution_time = start_time.elapsed();
+        let ms = execution_time.as_millis();
+        info!("Snipped finished running in {}ms", ms);
         let output = if output.stderr.is_empty() {
             output.stdout
         } else {

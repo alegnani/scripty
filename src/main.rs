@@ -2,6 +2,7 @@ use helper::*;
 use serenity::client::{Context, EventHandler};
 use serenity::model::channel::Message;
 use serenity::{async_trait, Client};
+use tracing::info;
 use std::env;
 
 use crate::languages::{run_pipeline, LanguagePool};
@@ -11,8 +12,17 @@ mod languages;
 
 #[tokio::main]
 async fn main() {
-    let _ = LANG_POOL.set(LanguagePool::new().await);
+    let file_appender = tracing_appender::rolling::never(".", "scripty.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    tracing_subscriber::fmt()
+        .with_writer(non_blocking)
+        .init();
 
+    let _ = LANG_POOL.set(LanguagePool::new().await);
+    let languages = LANG_POOL.get().unwrap().get_supported().await;
+
+    info!("Language pool set");
+    info!(?languages, "Supported");
     //const HELP_COMMAND: &str = "~help";
     //const HELP_MESSAGE: &str = "help message for scripty";
 
@@ -34,8 +44,8 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        println!("New message in channel");
         if msg.content.starts_with("~run") {
+            info!(?msg.content, "New message is a command");
             let reply = match run_pipeline(&msg.content).await {
                 Ok(s) => format!("```{}\n```\nElapsed time: {}ms", s.output, s.execution_time.as_millis()),
                 Err(e) => e.to_string(),
@@ -46,9 +56,9 @@ impl EventHandler for Handler {
     }
     // TODO: fix duplicated code
     async fn message_update(&self, ctx: Context, new_data: serenity::model::event::MessageUpdateEvent) {
-        println!("Message edited");
         let content = new_data.content.unwrap().clone();
         if content.starts_with("~run") {
+            info!(?content, "Edited message is a command");
             let reply = match run_pipeline(&content).await {
                 Ok(s) => format!("```{}\n```\nElapsed time: {}ms", s.output, s.execution_time.as_millis()),
                 Err(e) => e.to_string(),
@@ -57,7 +67,7 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn ready(&self, _ctx: Context, data: serenity::model::prelude::Ready) {
-        println!("{} is connected!", data.user.name);
+    async fn ready(&self, _ctx: Context, _data: serenity::model::prelude::Ready) {
+        info!("Scripty is online and ready");
     }
 }
