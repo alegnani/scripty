@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use std::{collections::HashSet, process::Stdio};
 use tokio::{fs, io::AsyncWriteExt, process::Command, time::{Instant, Duration}};
-use tracing::{instrument, info, warn, error};
+use tracing::{instrument, info, error};
 
 use crate::helper::{CMD_RGX, LANGS_PATH, LANG_POOL};
 
@@ -50,10 +50,11 @@ impl LanguagePool {
         self.set.iter().map(|s| s.clone()).collect()
     }
 
+    #[instrument]
     pub async fn new_snippet(&self, lang: String, code: String) -> Result<Snippet> {
         if self.lang_supported(&lang).await {
             let executor = format!("{}_executor", lang);
-            info!("New {} snippet created", lang);
+            info!("Language is supported");
             return Ok(Snippet::new(executor, code).await);
         }
         error!("Language not supported: {}", lang);
@@ -105,6 +106,8 @@ impl Snippet {
         });
         let output = run.wait_with_output().await.unwrap();
         let execution_time = start_time.elapsed();
+        let ms = execution_time.as_millis();
+        info!("Snipped finished running in {}ms", ms);
         let output = if output.stderr.is_empty() {
             output.stdout
         } else {

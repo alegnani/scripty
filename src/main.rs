@@ -39,8 +39,8 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        info!("New message detected: {}", msg.content);
         if msg.content.starts_with("~run") {
+            info!(?msg.content, "New message is a command");
             let reply = match run_pipeline(&msg.content).await {
                 Ok(s) => format!("```{}\n```\nElapsed time: {}ms", s.output, s.execution_time.as_millis()),
                 Err(e) => e.to_string(),
@@ -52,8 +52,8 @@ impl EventHandler for Handler {
     // TODO: fix duplicated code
     async fn message_update(&self, ctx: Context, new_data: serenity::model::event::MessageUpdateEvent) {
         let content = new_data.content.unwrap().clone();
-        info!("A message has been edited: {}", content);
         if content.starts_with("~run") {
+            info!(?content, "Edited message is a command");
             let reply = match run_pipeline(&content).await {
                 Ok(s) => format!("```{}\n```\nElapsed time: {}ms", s.output, s.execution_time.as_millis()),
                 Err(e) => e.to_string(),
