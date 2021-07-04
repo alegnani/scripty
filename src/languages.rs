@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
 use std::{collections::HashSet, process::Stdio};
-use tokio::{fs, io::AsyncWriteExt, process::Command};
+use tokio::{fs, io::AsyncWriteExt, process::Command, time::{Instant, Duration}};
 
 use crate::helper::{CMD_RGX, LANGS_PATH, LANG_POOL};
 
-pub async fn run_pipeline(msg: &str) -> Result<String> {
+pub async fn run_pipeline(msg: &str) -> Result<Response> {
     let (lang_str, code) = parse(msg).await?;
     let snippet = LANG_POOL.get().unwrap().new_snippet(lang_str, code).await?;
     let res = snippet.run().await?;
@@ -51,6 +51,18 @@ impl LanguagePool {
     }
 }
 
+pub struct Response {
+    pub output: String,
+    pub execution_time: Duration,
+}
+
+impl Response {
+    pub async fn new(output_raw: Vec<u8>, execution_time: Duration) -> Self {
+        let output = String::from_utf8(output_raw).unwrap();
+        Self { output, execution_time }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Snippet {
     executor: String,
@@ -61,8 +73,9 @@ impl Snippet {
     pub async fn new(executor: String, code: String) -> Self {
         Self { executor, code }
     }
+    pub async fn run(self) -> Result<Response> {
+        let start_time = Instant::now();
 
-    pub async fn run(self) -> Result<String> {
         let mut run = Command::new("docker")
             .args(&["run", "-i", "--rm"])
             .arg(&self.executor)
@@ -79,13 +92,14 @@ impl Snippet {
                 .map_err(|_| anyhow!("Could not pipe code to docker"))
         });
         let output = run.wait_with_output().await.unwrap();
+        let execution_time = start_time.elapsed();
         let output = if output.stderr.is_empty() {
             output.stdout
         } else {
             output.stderr
         };
 
-        Ok(String::from_utf8(output)?)
+        Ok(Response::new(output, execution_time).await)
     }
 }
 
@@ -129,13 +143,16 @@ mod tests {
 
     #[tokio::test]
     async fn snippet_run() {
-        // FIXME: fix java, not working
-        let snippet = Snippet::new("python_executor".into(), "print('test')".into()).await;
+        let snippet = Snippet::new("python_executor".into(), "print('python_test')".into()).await;
         let res = snippet.run().await.unwrap();
-        println!("Res: {}", res);
+        println!("Res: {}", res.output);
+        println!("Time: {}ms", res.execution_time.as_millis());
+        assert_eq!("python_test\n", res.output);
 
         let snippet = Snippet::new("cpp_executor".into(), "#include<iostream>\nusing namespace std;\nint main() {cout <<\"test.cpp\" << endl; return 1;}".into()).await;
         let res = snippet.run().await.unwrap();
-        println!("Res: {}", res);
+        println!("Res: {}", res.output);
+        println!("Time: {}ms", res.execution_time.as_millis());
+        assert_eq!("test.cpp\n", res.output);
     }
 }

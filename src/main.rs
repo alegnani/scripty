@@ -37,10 +37,9 @@ impl EventHandler for Handler {
         println!("New message in channel");
         if msg.content.starts_with("~run") {
             let reply = match run_pipeline(&msg.content).await {
-                Ok(s) => s,
+                Ok(s) => format!("```{}\n```\nElapsed time: {}ms", s.output, s.execution_time.as_millis()),
                 Err(e) => e.to_string(),
             };
-            let reply = format!("```{}```", reply);
             msg.reply(ctx.http, reply).await.unwrap();
 
         }
@@ -51,10 +50,9 @@ impl EventHandler for Handler {
         let content = new_data.content.unwrap().clone();
         if content.starts_with("~run") {
             let reply = match run_pipeline(&content).await {
-                Ok(s) => s,
+                Ok(s) => format!("```{}\n```\nElapsed time: {}ms", s.output, s.execution_time.as_millis()),
                 Err(e) => e.to_string(),
             };
-            let reply = format!("```{}```", reply);
             new_data.channel_id.say(ctx.http, reply).await.unwrap();
         }
     }
