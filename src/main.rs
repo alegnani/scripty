@@ -2,7 +2,7 @@ use helper::*;
 use serenity::client::{Context, EventHandler};
 use serenity::model::channel::Message;
 use serenity::{async_trait, Client};
-use tracing::{info, warn};
+use tracing::info;
 use std::env;
 
 use crate::languages::{run_pipeline, LanguagePool};
@@ -12,7 +12,12 @@ mod languages;
 
 #[tokio::main]
 async fn main() {
-    let collector = tracing_subscriber::fmt().init();
+    let file_appender = tracing_appender::rolling::never(".", "scripty.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    tracing_subscriber::fmt()
+        .with_writer(non_blocking)
+        .init();
+
     let _ = LANG_POOL.set(LanguagePool::new().await);
     let languages = LANG_POOL.get().unwrap().get_supported().await;
 

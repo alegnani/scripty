@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use std::{collections::HashSet, process::Stdio};
 use tokio::{fs, io::AsyncWriteExt, process::Command, time::{Instant, Duration}};
-use tracing::{instrument, info, error};
+use tracing::{instrument, info, warn, error};
 
 use crate::helper::{CMD_RGX, LANGS_PATH, LANG_POOL};
 
@@ -57,7 +57,7 @@ impl LanguagePool {
             info!("Language is supported");
             return Ok(Snippet::new(executor, code).await);
         }
-        error!("Language not supported: {}", lang);
+        warn!("Language not supported: {}", lang);
         Err(anyhow!("Language is not yet supported"))
     }
 }
