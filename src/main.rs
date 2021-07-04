@@ -2,6 +2,7 @@ use helper::*;
 use serenity::client::{Context, EventHandler};
 use serenity::model::channel::Message;
 use serenity::{async_trait, Client};
+use tracing::{info, warn};
 use std::env;
 
 use crate::languages::{run_pipeline, LanguagePool};
@@ -11,8 +12,12 @@ mod languages;
 
 #[tokio::main]
 async fn main() {
+    let collector = tracing_subscriber::fmt().init();
     let _ = LANG_POOL.set(LanguagePool::new().await);
+    let languages = LANG_POOL.get().unwrap().get_supported().await;
 
+    info!("Language pool set");
+    info!(?languages, "Supported");
     //const HELP_COMMAND: &str = "~help";
     //const HELP_MESSAGE: &str = "help message for scripty";
 
@@ -34,7 +39,7 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        println!("New message in channel");
+        info!("New message detected: {}", msg.content);
         if msg.content.starts_with("~run") {
             let reply = match run_pipeline(&msg.content).await {
                 Ok(s) => format!("```{}\n```\nElapsed time: {}ms", s.output, s.execution_time.as_millis()),
@@ -46,8 +51,8 @@ impl EventHandler for Handler {
     }
     // TODO: fix duplicated code
     async fn message_update(&self, ctx: Context, new_data: serenity::model::event::MessageUpdateEvent) {
-        println!("Message edited");
         let content = new_data.content.unwrap().clone();
+        info!("A message has been edited: {}", content);
         if content.starts_with("~run") {
             let reply = match run_pipeline(&content).await {
                 Ok(s) => format!("```{}\n```\nElapsed time: {}ms", s.output, s.execution_time.as_millis()),
@@ -57,7 +62,7 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn ready(&self, _ctx: Context, data: serenity::model::prelude::Ready) {
-        println!("{} is connected!", data.user.name);
+    async fn ready(&self, _ctx: Context, _data: serenity::model::prelude::Ready) {
+        info!("Scripty is online and ready");
     }
 }
