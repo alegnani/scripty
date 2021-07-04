@@ -120,6 +120,8 @@ impl Snippet {
 
 #[cfg(test)]
 mod tests {
+    use crate::helper::create_docker_executors;
+
     use super::*;
 
     #[tokio::test]
@@ -158,6 +160,7 @@ mod tests {
 
     #[tokio::test]
     async fn snippet_run() {
+        create_docker_executors().await;
         let snippet = Snippet::new("python_executor".into(), "print('python_test')".into()).await;
         let res = snippet.run().await.unwrap();
         println!("Res: {}", res.output);
