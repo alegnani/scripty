@@ -16,7 +16,8 @@ async fn main() {
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt().with_writer(non_blocking).init();
 
-    create_docker_executors().await;
+    create_docker_executors().await.unwrap();
+    
     let _ = LANG_POOL.set(LanguagePool::new().await);
     let languages = LANG_POOL.get().unwrap().get_supported().await;
 
