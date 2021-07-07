@@ -12,8 +12,12 @@ use crate::helper::{CMD_RGX, LANGS_PATH, LANG_POOL};
 
 pub async fn run_pipeline(msg: &str) -> Result<Response> {
     let (lang_str, code) = parse(msg).await?;
-    let snippet = LANG_POOL.get().unwrap().new_snippet(lang_str, code).await?;
-    let res = snippet.run().await?;
+    let code_file = LANG_POOL
+        .get()
+        .unwrap()
+        .from_code_file(lang_str, code)
+        .await?;
+    let res = code_file.run().await?;
     Ok(res)
 }
 
@@ -56,11 +60,11 @@ impl LanguagePool {
     }
 
     #[instrument]
-    pub async fn new_snippet(&self, lang: String, code: String) -> Result<Snippet> {
+    pub async fn from_code_file(&self, lang: String, code: String) -> Result<Executable> {
         if self.lang_supported(&lang).await {
             let executor = format!("{}_executor", lang);
             info!("Language is supported");
-            return Ok(Snippet::new(executor, code).await);
+            return Ok(Executable::new(executor, code).await);
         }
         warn!("Language not supported: {}", lang);
         Err(anyhow!("Language is not yet supported"))
@@ -83,12 +87,12 @@ impl Response {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Snippet {
+pub struct Executable {
     executor: String,
     code: String,
 }
 
-impl Snippet {
+impl Executable {
     pub async fn new(executor: String, code: String) -> Self {
         Self { executor, code }
     }
@@ -152,30 +156,34 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn lang_pool_new_snippet() {
+    async fn lang_pool_from_code_file() {
         let pool = LanguagePool::new().await;
-        let snippet = pool.new_snippet("cpp".into(), "test".into()).await.unwrap();
-        let reference = Snippet::new("cpp_executor".into(), "test".into()).await;
+        let snippet = pool
+            .from_code_file("cpp".into(), "test".into())
+            .await
+            .unwrap();
+        let reference = Executable::new("cpp_executor".into(), "test".into()).await;
         assert_eq!(snippet, reference);
 
         let snippet = pool
-            .new_snippet("rust".into(), "test".into())
+            .from_code_file("rust".into(), "test".into())
             .await
             .unwrap();
-        let reference = Snippet::new("rust_executor".into(), "test".into()).await;
+        let reference = Executable::new("rust_executor".into(), "test".into()).await;
         assert_eq!(snippet, reference);
     }
 
     #[tokio::test]
-    async fn snippet_run() {
-        create_docker_executors().await;
-        let snippet = Snippet::new("python_executor".into(), "print('python_test')".into()).await;
+    async fn code_file_run() {
+        create_docker_executors().await.unwrap();
+        let snippet =
+            Executable::new("python_executor".into(), "print('python_test')".into()).await;
         let res = snippet.run().await.unwrap();
         println!("Res: {}", res.output);
         println!("Time: {}ms", res.execution_time.as_millis());
         assert_eq!("python_test\n", res.output);
 
-        let snippet = Snippet::new("cpp_executor".into(), "#include<iostream>\nusing namespace std;\nint main() {cout <<\"test.cpp\" << endl; return 1;}".into()).await;
+        let snippet = Executable::new("cpp_executor".into(), "#include<iostream>\nusing namespace std;\nint main() {cout <<\"test.cpp\" << endl; return 1;}".into()).await;
         let res = snippet.run().await.unwrap();
         println!("Res: {}", res.output);
         println!("Time: {}ms", res.execution_time.as_millis());
