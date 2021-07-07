@@ -1,1 +1,1 @@
-println("test_julia")
+println("julia_test")

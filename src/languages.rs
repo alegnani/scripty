@@ -1,7 +1,12 @@
 use anyhow::{anyhow, Result};
 use std::{collections::HashSet, process::Stdio};
-use tokio::{fs, io::AsyncWriteExt, process::Command, time::{Instant, Duration}};
-use tracing::{instrument, info, warn, error};
+use tokio::{
+    fs,
+    io::AsyncWriteExt,
+    process::Command,
+    time::{Duration, Instant},
+};
+use tracing::{error, info, instrument, warn};
 
 use crate::helper::{CMD_RGX, LANGS_PATH, LANG_POOL};
 
@@ -70,7 +75,10 @@ pub struct Response {
 impl Response {
     pub async fn new(output_raw: Vec<u8>, execution_time: Duration) -> Self {
         let output = String::from_utf8(output_raw).unwrap();
-        Self { output, execution_time }
+        Self {
+            output,
+            execution_time,
+        }
     }
 }
 
