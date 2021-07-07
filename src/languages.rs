@@ -52,7 +52,7 @@ impl LanguagePool {
     }
 
     pub async fn get_supported(&self) -> Vec<String> {
-        self.set.iter().map(|s| s.clone()).collect()
+        self.set.iter().cloned().collect()
     }
 
     #[instrument]

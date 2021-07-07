@@ -57,7 +57,7 @@ async fn check_executor(language_dir_path: PathBuf, lang: &str) -> Result<()> {
             let file_name = file
                 .file_name()
                 .to_str()
-                .ok_or(anyhow!("Could not get file name"))?
+                .ok_or_else(|| anyhow!("Could not get file name"))?
                 .to_string();
 
             if file_name.starts_with("test") {
@@ -65,7 +65,7 @@ async fn check_executor(language_dir_path: PathBuf, lang: &str) -> Result<()> {
                     "{}/{}",
                     language_dir_path
                         .to_str()
-                        .ok_or(anyhow!("Could not get dir name"))?,
+                        .ok_or_else(|| anyhow!("Could not get dir name"))?,
                     file_name
                 );
                 // read the test.* file
