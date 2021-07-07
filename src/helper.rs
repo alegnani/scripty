@@ -71,7 +71,7 @@ async fn check_executor(language_dir_path: PathBuf, lang: &str) -> Result<()> {
                 let test_code = String::from_utf8(fs::read(test_file_path).await?)?;
                 let executor = format!("{}_executor", lang);
                 // run the code in the test.* file
-                if let Response::Output(res, exec_time) = Executable::new(executor, test_code)
+                if let Response::Output(res, _exec_time) = Executable::new(executor, test_code)
                     .await
                     .run()
                     .await
@@ -83,9 +83,10 @@ async fn check_executor(language_dir_path: PathBuf, lang: &str) -> Result<()> {
                         error!("Expected: {}_test, Got: {}", lang, test_output);
                         return Err(anyhow!("Executor did not pass test"));
                     }
-                }
+                } else {
                 error!("{}_executor timed out", lang);
                 return Err(anyhow!("Executor timed out"));
+                }
             }
         }
     }

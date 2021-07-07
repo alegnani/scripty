@@ -1,4 +1,5 @@
 use crate::helper::{CMD_RGX, LANG_POOL};
+use crate::languages::Response;
 
 pub async fn parse_command(cmd: &str) -> Option<String> {
     if let Some(cmd) = cmd.strip_prefix("~") {
@@ -30,11 +31,11 @@ async fn run_command(msg: &str) -> String {
         .run()
         .await
         .unwrap();
-    format!(
-        "```{}```\nIt took: {}ms",
-        response.output,
-        response.execution_time.as_millis()
-    )
+    if let Response::Output(res, exec_time) = response {
+        format!("```{}```\nIt took: {}ms", res, exec_time.as_millis())
+    } else {
+        "Code timed out!".into()
+    }
 }
 
 async fn help_command() -> String {
