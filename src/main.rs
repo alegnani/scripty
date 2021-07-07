@@ -17,7 +17,7 @@ async fn main() {
     tracing_subscriber::fmt().with_writer(non_blocking).init();
 
     create_docker_executors().await.unwrap();
-    
+
     let _ = LANG_POOL.set(LanguagePool::new().await);
     let languages = LANG_POOL.get().unwrap().get_supported().await;
 
