@@ -8,8 +8,8 @@ use tokio::process::Command;
 use tokio::sync::OnceCell;
 use tracing::{error, info, instrument};
 
+use crate::languages::Executable;
 use crate::languages::LanguagePool;
-use crate::languages::Snippet;
 
 pub static CMD_RGX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^~run *```([a-z]*)\n((?s).*)\n```").unwrap());
@@ -72,7 +72,7 @@ async fn check_executor(language_dir_path: PathBuf, lang: &str) -> Result<()> {
                 let test_code = String::from_utf8(fs::read(test_file_path).await?)?;
                 let executor = format!("{}_executor", lang);
                 // run the code in the test.* file
-                let test_output = Snippet::new(executor, test_code)
+                let test_output = Executable::new(executor, test_code)
                     .await
                     .run()
                     .await
