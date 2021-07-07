@@ -12,7 +12,7 @@ use crate::languages::Executable;
 use crate::languages::LanguagePool;
 
 pub static CMD_RGX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^~run *```([a-z]*)\n((?s).*)\n```").unwrap());
+    Lazy::new(|| Regex::new(r"^run *```([a-z]*)\n((?s).*)\n```").unwrap());
 
 pub static LANGS_PATH: Lazy<String> =
     Lazy::new(|| env::var("SCRIPTY").expect("Environment variable: SCRIPTY_LANGS not set"));

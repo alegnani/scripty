@@ -1,12 +1,14 @@
+use cli::parse_command;
 use helper::*;
 use serenity::client::{Context, EventHandler};
 use serenity::model::channel::Message;
 use serenity::{async_trait, Client};
 use std::env;
-use tracing::info;
+use tracing::{error, info};
 
-use crate::languages::{run_pipeline, LanguagePool};
+use crate::languages::LanguagePool;
 
+mod cli;
 mod helper;
 mod languages;
 
@@ -32,10 +34,9 @@ async fn main() {
         .event_handler(Handler)
         .await
         .expect("Error whilst creating client");
-    println!("Client created. Starting it");
 
     if let Err(e) = client.start().await {
-        println!("Client error: {:?}", &e);
+        error!("Client error: {}", &e);
     }
 }
 
@@ -44,36 +45,22 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        if msg.content.starts_with("~run") {
-            info!(?msg.content, "New message is a command");
-            let reply = match run_pipeline(&msg.content).await {
-                Ok(s) => format!(
-                    "```{}\n```\nElapsed time: {}ms",
-                    s.output,
-                    s.execution_time.as_millis()
-                ),
-                Err(e) => e.to_string(),
-            };
+        let _typing = msg.channel_id.start_typing(&ctx.http).unwrap();
+        let cmd = &msg.content;
+        if let Some(reply) = parse_command(cmd).await {
+            info!("New message is a scripty command!");
             msg.reply(ctx.http, reply).await.unwrap();
         }
     }
-    // TODO: fix duplicated code
     async fn message_update(
         &self,
         ctx: Context,
         new_data: serenity::model::event::MessageUpdateEvent,
     ) {
-        let content = new_data.content.unwrap().clone();
-        if content.starts_with("~run") {
-            info!(?content, "Edited message is a command");
-            let reply = match run_pipeline(&content).await {
-                Ok(s) => format!(
-                    "```{}\n```\nElapsed time: {}ms",
-                    s.output,
-                    s.execution_time.as_millis()
-                ),
-                Err(e) => e.to_string(),
-            };
+        let _typing = new_data.channel_id.start_typing(&ctx.http).unwrap();
+        let cmd = &new_data.content.unwrap();
+        if let Some(reply) = parse_command(cmd).await {
+            info!("Edited message is a scripty command!");
             new_data.channel_id.say(ctx.http, reply).await.unwrap();
         }
     }

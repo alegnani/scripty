@@ -8,18 +8,7 @@ use tokio::{
 };
 use tracing::{error, info, instrument, warn};
 
-use crate::helper::{CMD_RGX, LANGS_PATH, LANG_POOL};
-
-pub async fn run_pipeline(msg: &str) -> Result<Response> {
-    let (lang_str, code) = parse(msg).await?;
-    let code_file = LANG_POOL
-        .get()
-        .unwrap()
-        .from_code_file(lang_str, code)
-        .await?;
-    let res = code_file.run().await?;
-    Ok(res)
-}
+use crate::helper::{CMD_RGX, LANGS_PATH};
 
 #[instrument]
 pub async fn parse(msg: &str) -> Result<(String, String)> {
