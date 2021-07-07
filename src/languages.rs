@@ -71,18 +71,14 @@ impl LanguagePool {
     }
 }
 
-pub struct Response {
-    pub output: String,
-    pub execution_time: Duration,
+pub enum Response {
+    Output(String, Duration),
+    Timeout,
 }
 
 impl Response {
-    pub async fn new(output_raw: Vec<u8>, execution_time: Duration) -> Self {
-        let output = String::from_utf8(output_raw).unwrap();
-        Self {
-            output,
-            execution_time,
-        }
+    pub async fn output(output_raw: Vec<u8>, execution_time: Duration) -> Self {
+        Self::Output(String::from_utf8(output_raw).unwrap(), execution_time)
     }
 }
 
@@ -100,7 +96,6 @@ impl Executable {
     pub async fn run(self) -> Result<Response> {
         info!("Running snippet");
         let start_time = Instant::now();
-
         let mut run = Command::new("docker")
             .args(&["run", "-i", "--rm"])
             .arg(&self.executor)
@@ -116,17 +111,22 @@ impl Executable {
                 .await
                 .map_err(|_| anyhow!("Could not pipe code to docker"))
         });
-        let output = run.wait_with_output().await.unwrap();
-        let execution_time = start_time.elapsed();
-        let ms = execution_time.as_millis();
-        info!("Snipped finished running in {}ms", ms);
-        let output = if output.stderr.is_empty() {
-            output.stdout
-        } else {
-            output.stderr
-        };
-
-        Ok(Response::new(output, execution_time).await)
+        let output = tokio::time::timeout(Duration::from_secs(5), run.wait_with_output()).await;
+        match output {
+            Ok(res) => {
+                let res = res.unwrap();
+                let execution_time = start_time.elapsed();
+                let ms = execution_time.as_millis();
+                info!("Snipped finished running in {}ms", ms);
+                let res = if res.stderr.is_empty() {
+                    res.stdout
+                } else {
+                    res.stderr
+                };
+                Ok(Response::output(res, execution_time).await)
+            }
+            Err(_) => Ok(Response::Timeout),
+        }
     }
 }
 
@@ -178,15 +178,21 @@ mod tests {
         create_docker_executors().await.unwrap();
         let snippet =
             Executable::new("python_executor".into(), "print('python_test')".into()).await;
-        let res = snippet.run().await.unwrap();
-        println!("Res: {}", res.output);
-        println!("Time: {}ms", res.execution_time.as_millis());
-        assert_eq!("python_test\n", res.output);
+        if let Response::Output(ret, exec_time) = snippet.run().await.unwrap() {
+            println!("Res: {}", &ret);
+            println!("Time: {}ms", exec_time.as_millis());
+            assert_eq!("python_test\n", ret);
+        } else {
+            panic!("Executor timed out");
+        }
 
-        let snippet = Executable::new("cpp_executor".into(), "#include<iostream>\nusing namespace std;\nint main() {cout <<\"test.cpp\" << endl; return 1;}".into()).await;
-        let res = snippet.run().await.unwrap();
-        println!("Res: {}", res.output);
-        println!("Time: {}ms", res.execution_time.as_millis());
-        assert_eq!("test.cpp\n", res.output);
+        let snippet = Executable::new("cpp_executor".into(), "#include<iostream>\nusing namespace std;\nint main() {cout <<\"cpp_test\" << endl; return 1;}".into()).await;
+        if let Response::Output(ret, exec_time) = snippet.run().await.unwrap() {
+            println!("Res: {}", &ret);
+            println!("Time: {}ms", exec_time.as_millis());
+            assert_eq!("cpp_test\n", ret);
+        } else {
+            panic!("Executor timed out");
+        }
     }
 }
