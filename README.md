@@ -20,6 +20,12 @@ Being only in a very early stage scripty only supports the following commands:
 * `~langs` : List the supported languages
 * `~help` : Get help  
 
+## Invite Scripty into your server
+
+[Invite Scipty!](https://discord.com/api/oauth2/authorize?client_id=859836163769368577&permissions=84992&scope=bot)
+First of all thank you for using Scripty. :)
+Please note that Scripty might not be always online as it is still being developed and is not yet hosted.
+
 ## Supported languages
 * C
 * C++
