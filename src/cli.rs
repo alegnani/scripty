@@ -68,16 +68,8 @@ async fn logs(_ctx: &Context, _msg: &Message) -> CommandResult {
 async fn langs(ctx: &Context, msg: &Message) -> CommandResult {
     let _typing = msg.channel_id.start_typing(&ctx.http);
     let languages = LANG_POOL.get().unwrap().get_supported().await;
-    let language_list = languages.join("\n - ");
-    
-    let reply = MessageBuilder::new()
-        .quote_rest()
-        .push_bold_line("Supported languages:")
-        .push(" - ")
-        .push(language_list)
-        .build();
+    replies::langs(ctx, msg, languages).await;
 
-    msg.reply(&ctx.http, reply).await.unwrap();
     Ok(())
 }
 

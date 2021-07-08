@@ -50,11 +50,12 @@ pub async fn run_output(ctx: &Context, msg: &Message, response: Response) {
 }
 
 pub async fn langs(ctx: &Context, msg: &Message, languages: Vec<String>) {
+    let language_list = format!(" • {}", languages.join("\n • "));
     let _ = msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|e| {
             e
                 .title("Supported languages")
-                .description("Please refer to the help page with: `~help`")
+                .description(language_list)
         })
     })
     .await;
