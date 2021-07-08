@@ -16,8 +16,9 @@ print(list)
 ## Usage
 
 Being only in a very early stage scripty only supports the following commands:
-* ```` ~run ```<language>
-<code> ``` ````
+* `~run <CODE_BLOCK>` : Run the code in the CODE_BLOCK
+* `~langs` : List the supported languages
+* `~help` : Get help  
 
 ## Supported languages
 * C
