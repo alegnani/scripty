@@ -71,7 +71,7 @@ impl Response {
     }
 
     pub fn is_output(&self) -> bool {
-        matches!(self, Self::Timeout)
+        matches!(self, Self::Output(_,_))
     }
 }
 
