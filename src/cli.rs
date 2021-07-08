@@ -1,33 +1,29 @@
 use std::collections::HashSet;
 
 use crate::helper::{CMD_RGX, LANG_POOL};
-use crate::languages::Response;
 use crate::replies;
-
 
 use serenity::async_trait;
 use serenity::client::{Client, Context, EventHandler};
-use serenity::framework::standard::macros::{command, group, hook, help};
-use serenity::framework::standard::{Args, CommandGroup, CommandResult, DispatchError, HelpOptions, help_commands};
+use serenity::framework::standard::macros::{command, group, help, hook};
+use serenity::framework::standard::{
+    help_commands, Args, CommandGroup, CommandResult, HelpOptions,
+};
 use serenity::framework::StandardFramework;
 use serenity::model::channel::Message;
 use serenity::model::id::UserId;
 use serenity::model::prelude::Activity;
-use serenity::utils::{EmbedMessageBuilding, MessageBuilder};
 use tracing::{info, warn};
-
-
 
 pub async fn get_client(token: &str) -> Client {
     let framework = StandardFramework::new()
-        .configure(|c| c
-            .prefix("~"))
-            .before(before)
-            .after(after)
-            .unrecognised_command(unknown_command)
-            .help(&HELP)
-            .group(&EVERYONE_GROUP);
-            //.group(&ADMINS_GROUP); // TODO: add admin panel
+        .configure(|c| c.prefix("~"))
+        .before(before)
+        .after(after)
+        .unrecognised_command(unknown_command)
+        .help(&HELP)
+        .group(&EVERYONE_GROUP);
+    //.group(&ADMINS_GROUP); // TODO: add admin panel
     let client = Client::builder(token)
         .event_handler(Handler)
         .framework(framework)
@@ -49,7 +45,14 @@ struct Admins;
 #[individual_command_tip = "Hello World!\nThis is scripty, a bot allowing you to easily run your favourite code snippets directly in Discord!\nIf you want more information about a specific command, just pass the command as argument."]
 #[command_not_found_text = "Could not find: `{}`."]
 #[max_levenshtein_distance(1)]
-async fn help(ctx: &Context, msg: &Message, args: Args, help_options: &'static HelpOptions, groups: &[&'static CommandGroup], owners: HashSet<UserId>) -> CommandResult {
+async fn help(
+    ctx: &Context,
+    msg: &Message,
+    args: Args,
+    help_options: &'static HelpOptions,
+    groups: &[&'static CommandGroup],
+    owners: HashSet<UserId>,
+) -> CommandResult {
     println!("Help invoked!");
     let _ = help_commands::with_embeds(ctx, msg, args, help_options, groups, owners).await;
     Ok(())
@@ -107,7 +110,10 @@ async fn run(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
 #[hook]
 async fn before(_ctx: &Context, msg: &Message, command_name: &str) -> bool {
-    info!("Got command '{}' by user '{}'", command_name, msg.author.name);
+    info!(
+        "Got command '{}' by user '{}'",
+        command_name, msg.author.name
+    );
 
     true
 }
@@ -155,7 +161,8 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, _data: serenity::model::prelude::Ready) {
-        ctx.set_activity(Activity::playing("Counting 1s and 0s...")).await;
+        ctx.set_activity(Activity::playing("Counting 1s and 0s..."))
+            .await;
         info!("Scripty is online and ready");
     }
 }

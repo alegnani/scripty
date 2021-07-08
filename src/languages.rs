@@ -10,7 +10,6 @@ use tracing::{error, info, instrument, warn};
 
 use crate::helper::{CMD_RGX, LANGS_PATH};
 
-
 #[instrument]
 pub async fn parse(msg: &str) -> Result<(String, String)> {
     if !CMD_RGX.is_match(&msg) {
@@ -72,10 +71,7 @@ impl Response {
     }
 
     pub fn is_output(&self) -> bool {
-        match self {
-            Self::Timeout => false,
-            _ => true,
-        }
+        matches!(self, Self::Timeout)
     }
 }
 

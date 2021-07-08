@@ -2,8 +2,8 @@ use helper::*;
 use std::env;
 use tracing::{error, info};
 
-use crate::languages::LanguagePool;
 use crate::cli::get_client;
+use crate::languages::LanguagePool;
 
 mod cli;
 mod helper;
