@@ -10,6 +10,7 @@ use tracing::{error, info, instrument, warn};
 
 use crate::helper::{CMD_RGX, LANGS_PATH};
 
+
 #[instrument]
 pub async fn parse(msg: &str) -> Result<(String, String)> {
     if !CMD_RGX.is_match(&msg) {
@@ -68,6 +69,13 @@ pub enum Response {
 impl Response {
     pub async fn output(output_raw: Vec<u8>, execution_time: Duration) -> Self {
         Self::Output(String::from_utf8(output_raw).unwrap(), execution_time)
+    }
+
+    pub fn is_output(&self) -> bool {
+        match self {
+            Self::Timeout => false,
+            _ => true,
+        }
     }
 }
 
