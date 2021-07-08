@@ -10,8 +10,7 @@ use tracing::{error, info, instrument};
 
 use crate::languages::{Executable, LanguagePool, Response};
 
-pub static CMD_RGX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^run *```([a-z]*)\n((?s).*)\n```").unwrap());
+pub static CMD_RGX: Lazy<Regex> = Lazy::new(|| Regex::new(r"```([a-z]*)\n((?s).*)\n```").unwrap());
 
 pub static LANGS_PATH: Lazy<String> =
     Lazy::new(|| env::var("SCRIPTY").expect("Environment variable: SCRIPTY_LANGS not set"));
@@ -84,8 +83,8 @@ async fn check_executor(language_dir_path: PathBuf, lang: &str) -> Result<()> {
                         return Err(anyhow!("Executor did not pass test"));
                     }
                 } else {
-                error!("{}_executor timed out", lang);
-                return Err(anyhow!("Executor timed out"));
+                    error!("{}_executor timed out", lang);
+                    return Err(anyhow!("Executor timed out"));
                 }
             }
         }

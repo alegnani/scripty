@@ -69,6 +69,10 @@ impl Response {
     pub async fn output(output_raw: Vec<u8>, execution_time: Duration) -> Self {
         Self::Output(String::from_utf8(output_raw).unwrap(), execution_time)
     }
+
+    pub fn is_output(&self) -> bool {
+        matches!(self, Self::Timeout)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
