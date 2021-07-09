@@ -1,6 +1,6 @@
 use serenity::utils::MessageBuilder;
 
-use crate::languages::Response;
+use crate::languages::ContainerResponse;
 
 use super::*;
 
@@ -45,8 +45,8 @@ async fn reply_timed_out(ctx: &Context, msg: &Message) {
         .await;
 }
 
-async fn reply_output(ctx: &Context, msg: &Message, response: Response) {
-    if let Response::Output(res, exec_time) = response {
+async fn reply_output(ctx: &Context, msg: &Message, response: ContainerResponse) {
+    if let ContainerResponse::Output(res, exec_time) = response {
         let res = &format!("```{}```", res);
         let exec_time = &format!("{}ms", exec_time.as_millis());
         let response_to_long = msg

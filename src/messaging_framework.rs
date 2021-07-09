@@ -76,7 +76,6 @@ async fn logs(_ctx: &Context, _msg: &Message) -> CommandResult {
 #[command("langs")]
 #[description = "Returns a list of the supported languages"]
 #[usage = ""]
-#[num_args(0)]
 async fn langs(ctx: &Context, msg: &Message) -> CommandResult {
     commands::langs::logic(ctx, msg).await
 }

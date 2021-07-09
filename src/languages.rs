@@ -8,7 +8,7 @@ use tokio::{
 };
 use tracing::{error, info, instrument, warn};
 
-use crate::helper::{CMD_RGX, LANGS_PATH};
+use crate::utils::{CMD_RGX, LANGS_PATH};
 
 #[instrument]
 pub async fn parse(msg: &str) -> Result<(String, String)> {
@@ -60,12 +60,12 @@ impl LanguagePool {
     }
 }
 
-pub enum Response {
+pub enum ContainerResponse {
     Output(String, Duration),
     Timeout,
 }
 
-impl Response {
+impl ContainerResponse {
     pub async fn output(output_raw: Vec<u8>, execution_time: Duration) -> Self {
         Self::Output(String::from_utf8(output_raw).unwrap(), execution_time)
     }
@@ -86,7 +86,7 @@ impl Executable {
         Self { executor, code }
     }
     #[instrument]
-    pub async fn run(self) -> Result<Response> {
+    pub async fn run(self) -> Result<ContainerResponse> {
         info!("Running snippet");
         let start_time = Instant::now();
         let mut run = Command::new("docker")
@@ -116,16 +116,16 @@ impl Executable {
                 } else {
                     res.stderr
                 };
-                Ok(Response::output(res, execution_time).await)
+                Ok(ContainerResponse::output(res, execution_time).await)
             }
-            Err(_) => Ok(Response::Timeout),
+            Err(_) => Ok(ContainerResponse::Timeout),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::helper::create_docker_executors;
+    use crate::docker_executors::create_docker_executors;
 
     use super::*;
 
@@ -171,7 +171,7 @@ mod tests {
         create_docker_executors().await.unwrap();
         let snippet =
             Executable::new("python_executor".into(), "print('python_test')".into()).await;
-        if let Response::Output(ret, exec_time) = snippet.run().await.unwrap() {
+        if let ContainerResponse::Output(ret, exec_time) = snippet.run().await.unwrap() {
             println!("Res: {}", &ret);
             println!("Time: {}ms", exec_time.as_millis());
             assert_eq!("python_test\n", ret);
@@ -180,7 +180,7 @@ mod tests {
         }
 
         let snippet = Executable::new("cpp_executor".into(), "#include<iostream>\nusing namespace std;\nint main() {cout <<\"cpp_test\" << endl; return 1;}".into()).await;
-        if let Response::Output(ret, exec_time) = snippet.run().await.unwrap() {
+        if let ContainerResponse::Output(ret, exec_time) = snippet.run().await.unwrap() {
             println!("Res: {}", &ret);
             println!("Time: {}ms", exec_time.as_millis());
             assert_eq!("cpp_test\n", ret);

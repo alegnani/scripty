@@ -1,20 +1,11 @@
 use anyhow::{anyhow, Result};
-use once_cell::sync::Lazy;
-use regex::Regex;
-use std::env;
+use tracing::{instrument, info, error};
+use tokio::{fs, process::Command};
 use std::path::PathBuf;
-use tokio::fs;
-use tokio::process::Command;
-use tokio::sync::OnceCell;
-use tracing::{error, info, instrument};
 
-use crate::languages::{Executable, LanguagePool, Response};
+use crate::utils::LANGS_PATH;
+use crate::languages::{Executable, ContainerResponse};
 
-pub static CMD_RGX: Lazy<Regex> = Lazy::new(|| Regex::new(r"```([a-z]*)\n((?s).*)\n```").unwrap());
-
-pub static LANGS_PATH: Lazy<String> =
-    Lazy::new(|| env::var("SCRIPTY").expect("Environment variable: SCRIPTY_LANGS not set"));
-pub static LANG_POOL: OnceCell<LanguagePool> = OnceCell::const_new();
 
 #[instrument]
 pub async fn create_docker_executors() -> Result<()> {
@@ -70,7 +61,7 @@ async fn check_executor(language_dir_path: PathBuf, lang: &str) -> Result<()> {
                 let test_code = String::from_utf8(fs::read(test_file_path).await?)?;
                 let executor = format!("{}_executor", lang);
                 // run the code in the test.* file
-                if let Response::Output(res, _exec_time) = Executable::new(executor, test_code)
+                if let ContainerResponse::Output(res, _exec_time) = Executable::new(executor, test_code)
                     .await
                     .run()
                     .await
@@ -95,13 +86,6 @@ async fn check_executor(language_dir_path: PathBuf, lang: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_helper() {
-        println!("{:?}", CMD_RGX);
-        println!("{}", *LANGS_PATH);
-        let _ = LANG_POOL.set(LanguagePool::new().await);
-    }
 
     #[tokio::test]
     async fn test_executors() {
