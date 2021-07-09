@@ -2,13 +2,14 @@ use helper::*;
 use std::env;
 use tracing::{error, info};
 
-use crate::cli::get_client;
 use crate::languages::LanguagePool;
+use crate::messaging_framework::get_client;
 
-mod cli;
 mod helper;
 mod languages;
-mod replies;
+mod messaging_framework;
+
+mod commands;
 
 #[tokio::main]
 async fn main() {
